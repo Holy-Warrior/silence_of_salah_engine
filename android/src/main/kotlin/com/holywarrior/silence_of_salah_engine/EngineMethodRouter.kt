@@ -9,12 +9,29 @@ fun createEngineMethodRouter(actions: EngineNativeActions): Map<String, MethodHa
     return mapOf(
 
         "getPlatformVersion" to { _, result ->
-            result.success(actions.getPlatformVersion())
+            try {
+                result.success(actions.getPlatformVersion())
+            } catch (e: Exception) {
+                result.error("PLATFORM_VERSION_ERROR", e.message, null)
+            }
         },
 
         "startNativeTask" to { call, result ->
-            actions.startNativeTask(call.arguments as? Map<*, *>)
-            result.success(true)
+            try {
+                actions.startNativeTask(call.arguments as? Map<*, *>)
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("START_TASK_ERROR", e.message, null)
+            }
+        },
+
+        "stopNativeTask" to { _, result ->
+            try {
+                actions.stopNativeTask()
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("STOP_TASK_ERROR", e.message, null)
+            }
         }
 
     )
