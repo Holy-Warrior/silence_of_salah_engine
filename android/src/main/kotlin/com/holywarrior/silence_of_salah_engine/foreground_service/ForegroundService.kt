@@ -1,9 +1,9 @@
-package com.holywarrior.silence_of_salah_engine.foreground_service
+﻿package com.holywarrior.silence_of_salah_engine.foreground_service
 
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import com.holywarrior.silence_of_salah_engine.task.BaseForegroundTask
+import android.util.Log
 import com.holywarrior.silence_of_salah_engine.task.Task
 import com.holywarrior.silence_of_salah_engine.task.TaskStateController
 
@@ -13,15 +13,24 @@ class SilenceOfSalahEngineForegroundService : Service() {
     private lateinit var notificationController: NotificationController
 
     companion object {
+        private const val TAG = "SilenceEngineService"
+
         // Static fields to pass task from EngineNativeActions
-        var pendingTask: BaseForegroundTask<Any>? = null
-        var pendingStateController: Any? = null
+        var pendingTask: BaseForegroundTask<TaskStateController>? = null
+        var pendingStateController: TaskStateController? = null
+
+        @Volatile
+        private var isTaskActive: Boolean = false
+
+        internal fun setTaskActive(active: Boolean) {
+            isTaskActive = active
+        }
 
         /**
          * Returns true if a task is either pending to start or currently active.
          */
         fun isTaskRunning(): Boolean {
-            return pendingTask != null || controller?.isActive() == true
+            return pendingTask != null || isTaskActive
         }
     }
 
@@ -29,6 +38,7 @@ class SilenceOfSalahEngineForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "onCreate")
         WakeLockHelper.acquire(this)
 
         NotificationHelper.createChannel(this)
@@ -38,24 +48,23 @@ class SilenceOfSalahEngineForegroundService : Service() {
             NotificationHelper.NOTIFICATION_ID,
             notificationController.build()
         )
+        Log.d(TAG, "Foreground notification posted")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand startId=$startId flags=$flags pendingTask=${pendingTask != null} active=${controller?.isActive() == true}")
 
-        // Prevent duplicate execution if task is already active
         if (controller?.isActive() == true) return START_STICKY
 
         controller = ForegroundTaskController(this, notificationController)
 
-        // Determine if this is a recovery start or a normal start
-        val isRecovery = (pendingTask == null)
-        val task = pendingTask ?: Task() // create new task if recovering
+        val isRecovery = pendingTask == null
+        val task = pendingTask ?: Task()
         val stateController = pendingStateController ?: TaskStateController()
 
-        // Start the task using TaskRunner
         TaskRunner.start(controller!!, task, stateController, isRecovery)
+        Log.d(TAG, "TaskRunner.start invoked. isRecovery=$isRecovery")
 
-        // Clear pending static fields
         pendingTask = null
         pendingStateController = null
 
@@ -63,12 +72,14 @@ class SilenceOfSalahEngineForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
         controller?.stopTask()
         WakeLockHelper.release()
         super.onDestroy()
     }
 
     fun stopSelfSafely() {
+        Log.d(TAG, "stopSelfSafely")
         stopForeground(true)
         stopSelf()
     }

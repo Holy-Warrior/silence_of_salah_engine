@@ -1,24 +1,21 @@
-// This is a basic Flutter integration test.
-//
-// Since integration tests run in a full Flutter application, they can interact
-// with the host side of a plugin implementation, unlike Dart unit tests.
-//
-// For more information about Flutter integration tests, please see
-// https://flutter.dev/to/integration-testing
-
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-
 import 'package:silence_of_salah_engine/silence_of_salah_engine.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    final SilenceOfSalahEngine plugin = SilenceOfSalahEngine();
-    final String? version = await plugin.getPlatformVersion();
-    // The version string depends on the host platform running the test, so
-    // just assert that some non-empty string is returned.
-    expect(version?.isNotEmpty, true);
+  testWidgets('native foreground task smoke test', (WidgetTester tester) async {
+    final String? version = await SilenceOfSalahEngine.getPlatformVersion();
+    expect(version, isNotNull);
+    expect(version!.isNotEmpty, true);
+
+    final bool started = await SilenceOfSalahEngine.startNativeTask();
+    expect(started, true);
+
+    await Future<void>.delayed(const Duration(seconds: 5));
+
+    final bool stopped = await SilenceOfSalahEngine.stopNativeTask();
+    expect(stopped, true);
   });
 }

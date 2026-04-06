@@ -1,8 +1,9 @@
-package com.holywarrior.silence_of_salah_engine
+﻿package com.holywarrior.silence_of_salah_engine
 
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import com.holywarrior.silence_of_salah_engine.foreground_service.SilenceOfSalahEngineForegroundService
 import com.holywarrior.silence_of_salah_engine.task.Task
 import com.holywarrior.silence_of_salah_engine.task.TaskStateController
@@ -14,32 +15,43 @@ class EngineNativeActions(private val context: Context) {
     }
 
     fun startNativeTask(args: Map<*, *>?) {
-        // Only start a new task if no task is currently active or pending
+        Log.d(TAG, "startNativeTask called with args=$args")
+
         if (SilenceOfSalahEngineForegroundService.isTaskRunning()) {
-            // Task already running or pending, do nothing
+            Log.d(TAG, "Task start skipped because a task is already active or pending")
             return
         }
 
         val intent = Intent(context, SilenceOfSalahEngineForegroundService::class.java)
-
-        // Create a fresh Task instance and its state
         val task = Task()
         val stateController = TaskStateController()
 
-        // Pass the task to the service using static pending fields
         SilenceOfSalahEngineForegroundService.pendingTask = task
         SilenceOfSalahEngineForegroundService.pendingStateController = stateController
 
-        // Start the foreground service
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
+        try {
+            val componentName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+
+            Log.d(TAG, "Foreground service start requested. component=$componentName")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+            SilenceOfSalahEngineForegroundService.pendingTask = null
+            SilenceOfSalahEngineForegroundService.pendingStateController = null
+            throw e
         }
     }
 
     fun stopNativeTask() {
+        Log.d(TAG, "stopNativeTask called")
         val intent = Intent(context, SilenceOfSalahEngineForegroundService::class.java)
         context.stopService(intent)
+    }
+
+    companion object {
+        private const val TAG = "SilenceEngineNative"
     }
 }

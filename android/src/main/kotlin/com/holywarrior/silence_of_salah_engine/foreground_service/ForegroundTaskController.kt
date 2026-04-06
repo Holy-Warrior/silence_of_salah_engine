@@ -1,4 +1,4 @@
-package com.holywarrior.silence_of_salah_engine.foreground_service
+﻿package com.holywarrior.silence_of_salah_engine.foreground_service
 
 import kotlinx.coroutines.Job
 
@@ -11,6 +11,10 @@ class ForegroundTaskController(
 
     fun attachJob(job: Job) {
         this.job = job
+        SilenceOfSalahEngineForegroundService.setTaskActive(true)
+        job.invokeOnCompletion {
+            SilenceOfSalahEngineForegroundService.setTaskActive(false)
+        }
     }
 
     /**

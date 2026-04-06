@@ -1,15 +1,16 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.holywarrior.silence_of_salah_engine">
 
     <!-- Required for foreground services -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application>
 
-        <!-- Your foreground service -->
+        <!-- Foreground service exposed by the plugin library -->
         <service
-            android:name=".SilenceOfSalahEngineForegroundService"
+            android:name=".foreground_service.SilenceOfSalahEngineForegroundService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
