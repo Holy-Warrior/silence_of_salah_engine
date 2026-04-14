@@ -36,4 +36,12 @@ class SilenceOfSalahEngine {
       throw Exception("stopNativeTask failed: ${e.message}");
     }
   }
+
+  static Future<Map<Object?, Object?>?> getNativeStatus() async {
+    try {
+      return await _channel.invokeMethod<Map<Object?, Object?>>('getNativeStatus');
+    } on PlatformException catch (e) {
+      throw Exception("getNativeStatus failed: ${e.message}");
+    }
+  }
 }

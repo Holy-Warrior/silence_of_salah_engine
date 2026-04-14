@@ -32,6 +32,14 @@ fun createEngineMethodRouter(actions: EngineNativeActions): Map<String, MethodHa
             } catch (e: Exception) {
                 result.error("STOP_TASK_ERROR", e.message, null)
             }
+        },
+
+        "getNativeStatus" to { _, result ->
+            try {
+                result.success(actions.getNativeStatus())
+            } catch (e: Exception) {
+                result.error("STATUS_ERROR", e.message, null)
+            }
         }
 
     )

@@ -1,62 +1,46 @@
 package com.holywarrior.silence_of_salah_engine.ml_inference
 
-import ml.dmlc.xgboost4j.java.Booster
-import ml.dmlc.xgboost4j.java.DMatrix
-import ml.dmlc.xgboost4j.java.XGBoost
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.exp
 
 object XGBoostInference {
 
-    // ── State ────────────────────────────────────────────────────────────────
+    @Volatile
+    private var forest: NativeForest? = null
 
-    @Volatile private var booster: Booster? = null
-    @Volatile private var numFeatures: Int = 0
+    @Volatile
+    private var numFeatures: Int = 0
 
     private val isLoaded = AtomicBoolean(false)
 
-    private const val NUM_CHANNELS = 3
-
-    // ── Lifecycle ────────────────────────────────────────────────────────────
-
-    /**
-     * Safe model load (never crashes app)
-     */
     fun loadSafely(modelPath: String, windowSize: Int = 150): Boolean {
         return try {
-            if (!File(modelPath).exists()) {
-                return false
-            }
-
-            val newBooster = XGBoost.loadModel(modelPath)
-
-            synchronized(this) {
-                booster?.dispose()
-                booster = newBooster
-                numFeatures = windowSize * NUM_CHANNELS
-                isLoaded.set(true)
-            }
-
+            load(modelPath, windowSize)
             true
         } catch (e: Exception) {
             e.printStackTrace()
+            forest = null
             isLoaded.set(false)
             false
         }
     }
 
-    /**
-     * Strict load (optional use)
-     */
     fun load(modelPath: String, windowSize: Int = 150) {
         require(File(modelPath).exists()) { "Model file not found: $modelPath" }
 
-        val newBooster = XGBoost.loadModel(modelPath)
+        val json = File(modelPath).readText()
+        val root = JSONObject(json)
+        val parsedForest = NativeForest.fromJson(root)
 
         synchronized(this) {
-            booster?.dispose()
-            booster = newBooster
+            forest = parsedForest
             numFeatures = windowSize * NUM_CHANNELS
+            require(parsedForest.numFeatures == numFeatures) {
+                "Model expects ${parsedForest.numFeatures} features but task produces $numFeatures"
+            }
             isLoaded.set(true)
         }
     }
@@ -65,64 +49,117 @@ object XGBoostInference {
 
     fun dispose() {
         synchronized(this) {
-            booster?.dispose()
-            booster = null
+            forest = null
             isLoaded.set(false)
         }
     }
 
-    // ── Inference ────────────────────────────────────────────────────────────
-
-    /**
-     * Safe inference — NEVER crashes
-     */
     fun predictOrNull(features: FloatArray): PredictionResult? {
-        val b = booster ?: return null
+        val activeForest = forest ?: return null
 
         return try {
             if (features.size != numFeatures) return null
 
-            val matrix = DMatrix(features, 1, numFeatures.toLong(), Float.NaN)
-            val rawProb = b.predict(matrix)[0][0]
-            matrix.dispose()
+            val margin = activeForest.baseMargin + activeForest.trees.sumOf {
+                it.evaluate(features).toDouble()
+            }.toFloat()
+            val probability = sigmoid(margin)
+            val label = if (probability >= THRESHOLD) 1 else 0
 
-            val label = if (rawProb >= THRESHOLD) 1 else 0
-            PredictionResult(label, rawProb)
-
+            PredictionResult(label, probability)
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-    /**
-     * Strict inference (kept for internal/debug use)
-     */
-    fun predict(features: FloatArray): PredictionResult {
-        val b = booster
-            ?: error("Model not loaded. Call load() first.")
-
-        require(features.size == numFeatures)
-
-        val matrix = DMatrix(features, 1, numFeatures.toLong(), Float.NaN)
-        val rawProb = b.predict(matrix)[0][0]
-        matrix.dispose()
-
-        val label = if (rawProb >= THRESHOLD) 1 else 0
-        return PredictionResult(label, rawProb)
-    }
-
-    // ── Config ───────────────────────────────────────────────────────────────
-
     var THRESHOLD: Float = 0.5f
 
-    // ── Data class ───────────────────────────────────────────────────────────
+    private fun sigmoid(value: Float): Float {
+        return (1.0 / (1.0 + exp(-value.toDouble()))).toFloat()
+    }
 
     data class PredictionResult(val label: Int, val probability: Float) {
-        val isNimaz: Boolean get() = label == 1
+        val isNimaz: Boolean
+            get() = label == 1
+    }
 
-        override fun toString(): String {
-            return "PredictionResult(isNimaz=$isNimaz, probability=${"%.4f".format(probability)})"
+    private data class NativeForest(
+        val numFeatures: Int,
+        val baseMargin: Float,
+        val trees: List<TreeNode>
+    ) {
+        companion object {
+            fun fromJson(root: JSONObject): NativeForest {
+                val treesArray = root.getJSONArray("trees")
+                val trees = buildList(treesArray.length()) {
+                    for (index in 0 until treesArray.length()) {
+                        add(TreeNode.fromJson(treesArray.getJSONObject(index)))
+                    }
+                }
+
+                return NativeForest(
+                    numFeatures = root.getInt("numFeatures"),
+                    baseMargin = root.getDouble("baseMargin").toFloat(),
+                    trees = trees
+                )
+            }
         }
     }
+
+    private sealed interface TreeNode {
+        fun evaluate(features: FloatArray): Float
+
+        companion object {
+            fun fromJson(node: JSONObject): TreeNode {
+                if (node.has("leaf")) {
+                    return LeafNode(node.getDouble("leaf").toFloat())
+                }
+
+                val childrenById = mutableMapOf<Int, TreeNode>()
+                val childrenJson = node.getJSONArray("children")
+                for (index in 0 until childrenJson.length()) {
+                    val childJson = childrenJson.getJSONObject(index)
+                    childrenById[childJson.getInt("nodeid")] = fromJson(childJson)
+                }
+
+                return DecisionNode(
+                    featureIndex = node.getString("split").removePrefix("f").toInt(),
+                    threshold = node.getDouble("split_condition").toFloat(),
+                    yesNodeId = node.getInt("yes"),
+                    noNodeId = node.getInt("no"),
+                    missingNodeId = node.getInt("missing"),
+                    children = childrenById
+                )
+            }
+        }
+    }
+
+    private data class DecisionNode(
+        val featureIndex: Int,
+        val threshold: Float,
+        val yesNodeId: Int,
+        val noNodeId: Int,
+        val missingNodeId: Int,
+        val children: Map<Int, TreeNode>
+    ) : TreeNode {
+        override fun evaluate(features: FloatArray): Float {
+            val value = features[featureIndex]
+            val nextNodeId = when {
+                value.isNaN() -> missingNodeId
+                value < threshold -> yesNodeId
+                else -> noNodeId
+            }
+
+            return children.getValue(nextNodeId).evaluate(features)
+        }
+    }
+
+    private data class LeafNode(
+        val value: Float
+    ) : TreeNode {
+        override fun evaluate(features: FloatArray): Float = value
+    }
+
+    private const val NUM_CHANNELS = 3
 }

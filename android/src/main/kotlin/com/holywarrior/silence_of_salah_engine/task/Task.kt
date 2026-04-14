@@ -1,10 +1,18 @@
 package com.holywarrior.silence_of_salah_engine.task
 
-import com.holywarrior.silence_of_salah_engine.foreground_service.*
-import com.example.sensormanager.SensorsManager
+import com.holywarrior.silence_of_salah_engine.foreground_service.BaseForegroundTask
+import com.holywarrior.silence_of_salah_engine.foreground_service.ForegroundTaskController
+import com.holywarrior.silence_of_salah_engine.foreground_service.NotificationController
+import com.holywarrior.silence_of_salah_engine.ml_inference.XGBoostInference
+import com.holywarrior.silence_of_salah_engine.sensors.SensorsManager
+import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 
 class Task : BaseForegroundTask<TaskStateController>() {
+
+    companion object {
+        private const val TAG = "SilenceTask"
+    }
 
     override val loopIntervalMillis: Long = 100
 
@@ -86,10 +94,13 @@ class Task : BaseForegroundTask<TaskStateController>() {
             val features = buffer.toFlatArray()
             val prediction = XGBoostInference.predictOrNull(features) ?: return
 
+            val notificationText =
+                "Prayer=${prediction.isNimaz} label=${prediction.label} prob=${"%.4f".format(prediction.probability)} skips=$skippedInferenceCount"
+
+            Log.d(TAG, notificationText)
+
             notificationController
-                .setText(
-                    "Pred: ${prediction.label}, Prob: ${prediction.probability}, Skips: $skippedInferenceCount"
-                )
+                .setText(notificationText)
                 .update()
 
             skippedInferenceCount = 0

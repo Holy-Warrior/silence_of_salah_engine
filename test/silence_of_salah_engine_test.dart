@@ -1,28 +1,54 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silence_of_salah_engine/silence_of_salah_engine.dart';
-import 'package:silence_of_salah_engine/silence_of_salah_engine_platform_interface.dart';
-import 'package:silence_of_salah_engine/silence_of_salah_engine_method_channel.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-
-class MockSilenceOfSalahEnginePlatform
-    with MockPlatformInterfaceMixin
-    implements SilenceOfSalahEnginePlatform {
-  @override
-  Future<String?> getPlatformVersion() => Future.value('42');
-}
 
 void main() {
-  final SilenceOfSalahEnginePlatform initialPlatform = SilenceOfSalahEnginePlatform.instance;
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('$MethodChannelSilenceOfSalahEngine is the default instance', () {
-    expect(initialPlatform, isInstanceOf<MethodChannelSilenceOfSalahEngine>());
+  const channel = MethodChannel('silence_of_salah_engine');
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      switch (methodCall.method) {
+        case 'getPlatformVersion':
+          return 'Android 42';
+        case 'startNativeTask':
+          return true;
+        case 'stopNativeTask':
+          return true;
+        case 'getNativeStatus':
+          return <String, Object?>{
+            'serviceRunning': true,
+            'modelLoaded': true,
+          };
+        default:
+          return null;
+      }
+    });
   });
 
-  test('getPlatformVersion', () async {
-    SilenceOfSalahEngine silenceOfSalahEnginePlugin = SilenceOfSalahEngine();
-    MockSilenceOfSalahEnginePlatform fakePlatform = MockSilenceOfSalahEnginePlatform();
-    SilenceOfSalahEnginePlatform.instance = fakePlatform;
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
+  });
 
-    expect(await silenceOfSalahEnginePlugin.getPlatformVersion(), '42');
+  test('getPlatformVersion proxies through the method channel', () async {
+    expect(await SilenceOfSalahEngine.getPlatformVersion(), 'Android 42');
+  });
+
+  test('startNativeTask proxies through the method channel', () async {
+    expect(await SilenceOfSalahEngine.startNativeTask(), isTrue);
+  });
+
+  test('stopNativeTask proxies through the method channel', () async {
+    expect(await SilenceOfSalahEngine.stopNativeTask(), isTrue);
+  });
+
+  test('getNativeStatus returns the native diagnostics map', () async {
+    expect(
+      await SilenceOfSalahEngine.getNativeStatus(),
+      containsPair('modelLoaded', true),
+    );
   });
 }

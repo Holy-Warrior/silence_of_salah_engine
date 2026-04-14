@@ -1,10 +1,11 @@
 ﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.holywarrior.silence_of_salah_engine">
 
-    <!-- Required for foreground services -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application>
 
@@ -12,7 +13,8 @@
         <service
             android:name=".foreground_service.SilenceOfSalahEngineForegroundService"
             android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:stopWithTask="false"
+            android:foregroundServiceType="health" />
 
     </application>
 

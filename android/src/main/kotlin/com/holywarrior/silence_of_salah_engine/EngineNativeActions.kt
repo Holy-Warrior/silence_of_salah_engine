@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import com.holywarrior.silence_of_salah_engine.foreground_service.SilenceOfSalahEngineForegroundService
+import com.holywarrior.silence_of_salah_engine.ml_inference.ModelAssetInstaller
+import com.holywarrior.silence_of_salah_engine.ml_inference.XGBoostInference
 import com.holywarrior.silence_of_salah_engine.task.Task
 import com.holywarrior.silence_of_salah_engine.task.TaskStateController
 
@@ -49,6 +51,16 @@ class EngineNativeActions(private val context: Context) {
         Log.d(TAG, "stopNativeTask called")
         val intent = Intent(context, SilenceOfSalahEngineForegroundService::class.java)
         context.stopService(intent)
+    }
+
+    fun getNativeStatus(): Map<String, Any?> {
+        return mapOf(
+            "platformVersion" to getPlatformVersion(),
+            "serviceRunning" to SilenceOfSalahEngineForegroundService.isTaskRunning(),
+            "modelLoaded" to XGBoostInference.isLoaded(),
+            "modelPath" to ModelAssetInstaller.installedModelPath,
+            "nativeModelPath" to ModelAssetInstaller.installedNativeModelPath
+        )
     }
 
     companion object {

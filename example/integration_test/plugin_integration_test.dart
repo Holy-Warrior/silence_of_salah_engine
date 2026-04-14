@@ -13,7 +13,11 @@ void main() {
     final bool started = await SilenceOfSalahEngine.startNativeTask();
     expect(started, true);
 
-    await Future<void>.delayed(const Duration(seconds: 5));
+    await Future<void>.delayed(const Duration(seconds: 20));
+
+    final status = await SilenceOfSalahEngine.getNativeStatus();
+    expect(status, isNotNull);
+    expect(status!['serviceRunning'], true);
 
     final bool stopped = await SilenceOfSalahEngine.stopNativeTask();
     expect(stopped, true);

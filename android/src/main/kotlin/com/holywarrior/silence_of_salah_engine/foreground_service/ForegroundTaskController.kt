@@ -1,6 +1,5 @@
 ﻿package com.holywarrior.silence_of_salah_engine.foreground_service
 
-import android.content.Context
 import kotlinx.coroutines.Job
 
 class ForegroundTaskController(
