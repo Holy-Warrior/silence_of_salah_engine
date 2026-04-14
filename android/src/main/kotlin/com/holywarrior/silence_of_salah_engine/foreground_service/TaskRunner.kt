@@ -4,12 +4,6 @@ import kotlinx.coroutines.*
 
 object TaskRunner {
 
-    /**
-     * Start a foreground task with lifecycle management.
-     *
-     * @param task Task instance extending [BaseForegroundTask]
-     * @param persistentController User-defined state controller
-     */
     fun <T : Any> start(
         controller: ForegroundTaskController,
         task: BaseForegroundTask<T>,
@@ -20,14 +14,15 @@ object TaskRunner {
 
         val job = scope.launch {
             try {
-                // Call proper start function
+                // IMPORTANT: wake lock now belongs to task execution lifecycle
+                controller.acquireWakeLock()
+
                 if (isRecovery) {
                     task.onRecover(controller, controller.notification, persistentController)
                 } else {
                     task.onStart(controller, controller.notification, persistentController)
                 }
 
-                // Optional loop
                 if (task.loopIntervalMillis > 0) {
                     while (currentCoroutineContext().isActive) {
                         task.onLoop(controller, controller.notification, persistentController)
@@ -36,11 +31,12 @@ object TaskRunner {
                 }
 
             } catch (e: CancellationException) {
-                // expected on cancel
+                // normal shutdown
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
                 task.onDestroy(controller, controller.notification, persistentController)
+                controller.releaseWakeLock()
             }
         }
 

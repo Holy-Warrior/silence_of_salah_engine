@@ -26,13 +26,23 @@ class NotificationController(
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // ✅ Cache last text to prevent unnecessary updates
+    private var lastText: String? = null
+    private var lastTitle: String? = null
+
     fun setTitle(title: String): NotificationController {
-        builder.setContentTitle(title)
+        if (title != lastTitle) {
+            builder.setContentTitle(title)
+            lastTitle = title
+        }
         return this
     }
 
     fun setText(text: String): NotificationController {
-        builder.setContentText(text)
+        if (text != lastText) {
+            builder.setContentText(text)
+            lastText = text
+        }
         return this
     }
 
@@ -47,7 +57,6 @@ class NotificationController(
     }
 
     fun update() {
-        // Ensure update always happens on main thread
         mainHandler.post {
             manager.notify(NotificationHelper.NOTIFICATION_ID, builder.build())
         }

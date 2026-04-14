@@ -1,5 +1,6 @@
 ﻿package com.holywarrior.silence_of_salah_engine.foreground_service
 
+import android.content.Context
 import kotlinx.coroutines.Job
 
 class ForegroundTaskController(
@@ -9,19 +10,39 @@ class ForegroundTaskController(
 
     private var job: Job? = null
 
+    private var wakeLockHeld = false
+
     fun attachJob(job: Job) {
         this.job = job
         SilenceOfSalahEngineForegroundService.setTaskActive(true)
+
         job.invokeOnCompletion {
             SilenceOfSalahEngineForegroundService.setTaskActive(false)
+            releaseWakeLock() // safety fallback
         }
     }
 
     /**
-     * Safely stops the task by cancelling the coroutine job and stopping the service.
+     * Call this when task actually starts running logic
      */
+    fun acquireWakeLock() {
+        if (wakeLockHeld) return
+        WakeLockHelper.acquire(service)
+        wakeLockHeld = true
+    }
+
+    /**
+     * Safe release (idempotent)
+     */
+    fun releaseWakeLock() {
+        if (!wakeLockHeld) return
+        WakeLockHelper.release()
+        wakeLockHeld = false
+    }
+
     fun stopTask() {
-        job?.cancel() // coroutine cancellation
+        job?.cancel()
+        releaseWakeLock()
         service.stopSelfSafely()
     }
 
