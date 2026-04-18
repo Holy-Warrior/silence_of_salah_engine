@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Added permissions -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
 
     <application>
 
@@ -15,6 +20,11 @@
             android:exported="false"
             android:stopWithTask="false"
             android:foregroundServiceType="health" />
+
+        <!-- Added receiver -->
+        <receiver
+            android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
 
     </application>
 

@@ -40,6 +40,50 @@ fun createEngineMethodRouter(actions: EngineNativeActions): Map<String, MethodHa
             } catch (e: Exception) {
                 result.error("STATUS_ERROR", e.message, null)
             }
+        },
+
+        "getPermissionStatus" to { _, result ->
+            try {
+                result.success(actions.getPermissionStatus())
+            } catch (e: Exception) {
+                result.error("PERMISSION_STATUS_ERROR", e.message, null)
+            }
+        },
+
+        "requestExactAlarmPermission" to { _, result ->
+            try {
+                actions.requestExactAlarmPermission()
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("REQUEST_EXACT_ALARM_ERROR", e.message, null)
+            }
+        },
+
+        "requestDndAccess" to { _, result ->
+            try {
+                actions.requestDndAccess()
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("REQUEST_DND_ERROR", e.message, null)
+            }
+        },
+
+        "requestBatteryOptimization" to { _, result ->
+            try {
+                actions.requestBatteryOptimizationIgnore()
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("REQUEST_BATTERY_ERROR", e.message, null)
+            }
+        },
+
+        "requestNotificationPermission" to { _, result ->
+            try {
+                actions.requestNotificationPermission()
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("REQUEST_NOTIFICATION_ERROR", e.message, null)
+            }
         }
 
     )

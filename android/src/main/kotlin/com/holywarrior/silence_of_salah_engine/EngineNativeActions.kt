@@ -9,9 +9,13 @@ import com.holywarrior.silence_of_salah_engine.ml_inference.ModelAssetInstaller
 import com.holywarrior.silence_of_salah_engine.ml_inference.XGBoostInference
 import com.holywarrior.silence_of_salah_engine.task.Task
 import com.holywarrior.silence_of_salah_engine.task.TaskStateController
+import android.app.Activity
+import com.holywarrior.silence_of_salah_engine.permissions.PermissionManager
 
-class EngineNativeActions(private val context: Context) {
-
+class EngineNativeActions(
+    private val context: Context,
+    private val activity: Activity? = null
+) {
     fun getPlatformVersion(): String {
         return "Android ${Build.VERSION.RELEASE}"
     }
@@ -65,5 +69,38 @@ class EngineNativeActions(private val context: Context) {
 
     companion object {
         private const val TAG = "SilenceEngineNative"
+    }
+
+    // ─────────────────────────────────────────────
+    // PERMISSION BRIDGE
+    // ─────────────────────────────────────────────
+
+    fun getPermissionStatus(): Map<String, Any> {
+        val status = PermissionManager.checkAll(context)
+
+        return mapOf(
+            "exactAlarm" to status.exactAlarm,
+            "dnd" to status.dnd,
+            "batteryOptimization" to status.batteryOptimization,
+            "notifications" to status.notifications,
+            "allGranted" to status.allGranted()
+        )
+    }
+
+    fun requestExactAlarmPermission() {
+        PermissionManager.requestExactAlarmPermission(context)
+    }
+
+    fun requestDndAccess() {
+        PermissionManager.requestDndAccess(context)
+    }
+
+    fun requestBatteryOptimizationIgnore() {
+        PermissionManager.requestIgnoreBatteryOptimizations(context)
+    }
+
+    fun requestNotificationPermission() {
+        val act = activity ?: return
+        PermissionManager.requestNotificationPermission(act, 1001)
     }
 }
