@@ -1,28 +1,24 @@
 package com.holywarrior.silence_of_salah_engine.task
 
+import com.holywarrior.silence_of_salah_engine.Config
+import com.holywarrior.silence_of_salah_engine.EngineLog
 import com.holywarrior.silence_of_salah_engine.foreground_service.BaseForegroundTask
 import com.holywarrior.silence_of_salah_engine.foreground_service.ForegroundTaskController
 import com.holywarrior.silence_of_salah_engine.foreground_service.NotificationController
 import com.holywarrior.silence_of_salah_engine.ml_inference.XGBoostInference
 import com.holywarrior.silence_of_salah_engine.sensors.SensorsManager
-import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 
 class Task : BaseForegroundTask<TaskStateController>() {
-
     companion object {
-        private const val TAG = "SilenceTask"
+        private const val TAG = "Task"
     }
 
-    override val loopIntervalMillis: Long = 100
+    override val loopIntervalMillis: Long = Config.SENSOR_LOOP_INTERVAL_MS
 
-    // 🔒 TRUE thread-safe lock
     private val isInferenceRunning = AtomicBoolean(false)
-
     private var skippedInferenceCount = 0
     private var lastInferenceStartTime = 0L
-
-    private val INFERENCE_TIMEOUT_MS = 5_000L
 
     override suspend fun onStart(
         taskController: ForegroundTaskController,
@@ -30,11 +26,13 @@ class Task : BaseForegroundTask<TaskStateController>() {
         stateController: TaskStateController
     ) {
         notificationController
-            .setTitle("Silence of Salah")
-            .setText("Task started")
+            .setTitle(Config.NOTIFICATION_TITLE)
+            .setText(Config.NOTIFICATION_TEXT_RUNNING)
             .update()
 
+        stateController.decisionEngine.prepareFreshSession()
         SensorsManager.start()
+        EngineLog.i(TAG, "Task started.")
     }
 
     override suspend fun onRecover(
@@ -43,11 +41,12 @@ class Task : BaseForegroundTask<TaskStateController>() {
         stateController: TaskStateController
     ) {
         notificationController
-            .setTitle("Silence of Salah")
-            .setText("Resuming task...")
+            .setTitle(Config.NOTIFICATION_TITLE)
+            .setText(Config.NOTIFICATION_TEXT_RECOVERING)
             .update()
 
         SensorsManager.start()
+        EngineLog.i(TAG, "Task recovered.")
     }
 
     override suspend fun onLoop(
@@ -55,22 +54,21 @@ class Task : BaseForegroundTask<TaskStateController>() {
         notificationController: NotificationController,
         stateController: TaskStateController
     ) {
-        val buffer = stateController.sensorBuffer
+        stateController.decisionEngine.checkForDelayedShutdown(taskController)
 
-        // ✅ Sample
+        val buffer = stateController.sensorBuffer
         val (acc, gyr, mag) = SensorsManager.getLatestMagnitudes()
         buffer.addSample(acc, gyr, mag)
 
-        if (!buffer.isFull()) return
+        if (!buffer.isFull()) {
+            return
+        }
 
         val now = System.currentTimeMillis()
-
-        // 🧠 Watchdog check
         if (isInferenceRunning.get()) {
             val elapsed = now - lastInferenceStartTime
-
-            if (elapsed > INFERENCE_TIMEOUT_MS) {
-                // ⚠️ Force unlock (rare case)
+            if (elapsed > Config.INFERENCE_TIMEOUT_MS) {
+                EngineLog.w(TAG, "Inference watchdog reset triggered after ${elapsed}ms.")
                 isInferenceRunning.set(false)
                 skippedInferenceCount = 0
             } else {
@@ -79,7 +77,6 @@ class Task : BaseForegroundTask<TaskStateController>() {
             }
         }
 
-        // 🔒 Atomic lock acquisition
         if (!isInferenceRunning.compareAndSet(false, true)) {
             skippedInferenceCount++
             return
@@ -89,26 +86,28 @@ class Task : BaseForegroundTask<TaskStateController>() {
 
         try {
             if (!XGBoostInference.isLoaded()) {
+                EngineLog.w(TAG, "Inference skipped because the model is not loaded.")
                 return
             }
+
             val features = buffer.toFlatArray()
             val prediction = XGBoostInference.predictOrNull(features) ?: return
+            val decisionSnapshot = stateController.decisionEngine.handlePrediction(prediction.isNimaz)
 
-            val notificationText =
-                "Prayer=${prediction.isNimaz} label=${prediction.label} prob=${"%.4f".format(prediction.probability)} skips=$skippedInferenceCount"
-
-            Log.d(TAG, notificationText)
+            EngineLog.d(
+                TAG,
+                "Prediction processed. detected=${prediction.isNimaz} label=${prediction.label} probability=${prediction.probability} skips=$skippedInferenceCount decision=$decisionSnapshot"
+            )
 
             notificationController
-                .setText(notificationText)
+                .setTitle(Config.NOTIFICATION_TITLE)
+                .setText(Config.NOTIFICATION_TEXT_RUNNING)
                 .update()
 
             skippedInferenceCount = 0
-
             buffer.popHalf()
-
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (error: Exception) {
+            EngineLog.e(TAG, "Task loop failed.", error)
         } finally {
             isInferenceRunning.set(false)
         }
@@ -120,15 +119,19 @@ class Task : BaseForegroundTask<TaskStateController>() {
         stateController: TaskStateController
     ) {
         SensorsManager.stop()
-
         stateController.sensorBuffer.clear()
+        stateController.decisionEngine.restoreAudioIfNeeded()
 
         notificationController
-            .setText("Task finished")
+            .setTitle(Config.NOTIFICATION_TITLE)
+            .setText("Service stopped")
             .update()
+
+        EngineLog.i(TAG, "Task destroyed and cleaned up.")
     }
 }
 
-class TaskStateController {
-    val sensorBuffer = SensorBuffer(windowSize = 150)
+class TaskStateController(context: android.content.Context) {
+    val sensorBuffer = SensorBuffer(windowSize = Config.SENSOR_WINDOW_SIZE)
+    val decisionEngine = MlDecisionEngine(context.applicationContext)
 }

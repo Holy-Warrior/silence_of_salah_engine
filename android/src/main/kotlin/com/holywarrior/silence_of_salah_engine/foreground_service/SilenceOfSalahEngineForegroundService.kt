@@ -4,58 +4,62 @@ import android.app.Service
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import com.holywarrior.silence_of_salah_engine.Config
+import com.holywarrior.silence_of_salah_engine.EngineLog
 import com.holywarrior.silence_of_salah_engine.ml_inference.ModelAssetInstaller
 import com.holywarrior.silence_of_salah_engine.sensors.SensorsManager
 import com.holywarrior.silence_of_salah_engine.task.Task
 import com.holywarrior.silence_of_salah_engine.task.TaskStateController
 
 class SilenceOfSalahEngineForegroundService : Service() {
-
     private var controller: ForegroundTaskController? = null
     private lateinit var notificationController: NotificationController
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "onCreate")
+        EngineLog.i(TAG, "onCreate")
 
         NotificationHelper.createChannel(this)
         notificationController = NotificationController(this)
-        startForeground(
-            NotificationHelper.NOTIFICATION_ID,
-            notificationController.build()
-        )
+        startForeground(Config.NOTIFICATION_ID, notificationController.build())
 
         SensorsManager.initialize(applicationContext)
         val modelPath = ModelAssetInstaller.ensureInstalled(applicationContext)
         val loaded = ModelAssetInstaller.loadModel(modelPath)
-
+        EngineLog.i(TAG, "Model load completed. loaded=$loaded path=$modelPath")
         notificationController
-            .setTitle("Silence of Salah")
-            .setText(
-                if (loaded) {
-                    "Model ready. Waiting for sensor window..."
-                } else {
-                    "Model load failed. Check plugin logs."
-                }
-            )
+            .setTitle(Config.NOTIFICATION_TITLE)
+            .setText(Config.NOTIFICATION_TEXT_RUNNING)
             .update()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand startId=$startId flags=$flags")
+        val action = intent?.action ?: Config.ACTION_START
+        val reason = intent?.getStringExtra(Config.EXTRA_START_REASON)
+        EngineLog.i(TAG, "onStartCommand action=$action startId=$startId flags=$flags reason=$reason")
+
+        when (action) {
+            Config.ACTION_STOP, Config.ACTION_WAKELOCK_TIMEOUT -> {
+                clearPendingStart()
+                controller?.requestStop(reason ?: action)
+                    ?: stopSelfSafely()
+                return START_NOT_STICKY
+            }
+        }
 
         if (controller?.isActive() == true) {
+            EngineLog.d(TAG, "Start request ignored because the task is already active.")
             return START_STICKY
         }
 
         val task = pendingTask ?: Task()
-        val stateController = pendingStateController ?: TaskStateController()
+        val stateController = pendingStateController ?: TaskStateController(applicationContext)
         pendingTask = null
         pendingStateController = null
 
         val taskController = ForegroundTaskController(this, notificationController)
         controller = taskController
+        taskController.acquireWakeLock()
 
         TaskRunner.start(
             controller = taskController,
@@ -68,13 +72,13 @@ class SilenceOfSalahEngineForegroundService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "onTaskRemoved")
+        EngineLog.i(TAG, "onTaskRemoved")
         super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy")
-        controller?.stopTask()
+        EngineLog.i(TAG, "onDestroy")
+        controller?.handleServiceDestroy()
         controller = null
         super.onDestroy()
     }
@@ -92,7 +96,7 @@ class SilenceOfSalahEngineForegroundService : Service() {
     }
 
     companion object {
-        private const val TAG = "SilenceFgService"
+        private const val TAG = "Service"
         const val EXTRA_RECOVERY = "recovery"
 
         @Volatile
@@ -110,6 +114,13 @@ class SilenceOfSalahEngineForegroundService : Service() {
         @JvmStatic
         fun setTaskActive(active: Boolean) {
             taskActive = active
+        }
+
+        @JvmStatic
+        fun clearPendingStart() {
+            pendingTask = null
+            pendingStateController = null
+            taskActive = false
         }
     }
 }

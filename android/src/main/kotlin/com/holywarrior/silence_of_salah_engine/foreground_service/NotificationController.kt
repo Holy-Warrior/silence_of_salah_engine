@@ -5,12 +5,11 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
-import android.widget.RemoteViews
+import com.holywarrior.silence_of_salah_engine.Config
 
 class NotificationController(
     private val context: Context
 ) {
-
     private val manager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -18,15 +17,16 @@ class NotificationController(
         context,
         NotificationHelper.CHANNEL_ID
     ).apply {
-        setContentTitle("Silence of Salah")
-        setContentText("Starting...")
+        setContentTitle(Config.NOTIFICATION_TITLE)
+        setContentText(Config.NOTIFICATION_TEXT_STARTING)
         setSmallIcon(android.R.drawable.ic_lock_silent_mode)
         setOngoing(true)
+        priority = NotificationCompat.PRIORITY_LOW
+        setOnlyAlertOnce(true)
+        setSilent(true)
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
-
-    // ✅ Cache last text to prevent unnecessary updates
     private var lastText: String? = null
     private var lastTitle: String? = null
 
@@ -43,16 +43,6 @@ class NotificationController(
             builder.setContentText(text)
             lastText = text
         }
-        return this
-    }
-
-    fun addAction(icon: Int, title: String, pendingIntent: android.app.PendingIntent): NotificationController {
-        builder.addAction(icon, title, pendingIntent)
-        return this
-    }
-
-    fun setCustomView(remoteViews: RemoteViews): NotificationController {
-        builder.setCustomContentView(remoteViews)
         return this
     }
 

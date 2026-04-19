@@ -26,7 +26,7 @@ class SilenceOfSalahEnginePlugin :
         actions = EngineNativeActions(context) // temp, will update when activity attaches
         router = createEngineMethodRouter(actions)
 
-        channel = MethodChannel(binding.binaryMessenger, "silence_of_salah_engine")
+        channel = MethodChannel(binding.binaryMessenger, Config.METHOD_CHANNEL_NAME)
         channel.setMethodCallHandler(this)
     }
 

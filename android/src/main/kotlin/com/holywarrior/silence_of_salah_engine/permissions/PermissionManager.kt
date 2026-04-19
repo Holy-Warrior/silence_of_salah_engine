@@ -1,50 +1,40 @@
 package com.holywarrior.silence_of_salah_engine.permissions
 
 import android.app.Activity
+import android.app.AlarmManager
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 
 object PermissionManager {
-
-    // ─────────────────────────────────────────────
-    // Foreground Service (no runtime permission)
-    // ─────────────────────────────────────────────
-
-    fun hasForegroundServicePermission(): Boolean {
-        // Always true if declared in manifest
-        return true
+    private fun activityIntent(context: Context, action: String, uri: Uri? = null): Intent {
+        return Intent(action).apply {
+            uri?.let { data = it }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
     }
-
-    // ─────────────────────────────────────────────
-    // Exact Alarm Permission (Android 12+)
-    // ─────────────────────────────────────────────
 
     fun hasExactAlarmPermission(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
 
-        val alarmManager =
-            context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         return alarmManager.canScheduleExactAlarms()
     }
 
     fun requestExactAlarmPermission(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-
-        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-            data = Uri.parse("package:${context.packageName}")
-        }
-
-        context.startActivity(intent)
+        context.startActivity(
+            activityIntent(
+                context,
+                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                Uri.parse("package:${context.packageName}")
+            )
+        )
     }
-
-    // ─────────────────────────────────────────────
-    // Do Not Disturb (for silent mode control)
-    // ─────────────────────────────────────────────
 
     fun hasDndAccess(context: Context): Boolean {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -52,40 +42,32 @@ object PermissionManager {
     }
 
     fun requestDndAccess(context: Context) {
-        val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-        context.startActivity(intent)
+        context.startActivity(activityIntent(context, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
     }
-
-    // ─────────────────────────────────────────────
-    // Battery Optimization (IMPORTANT for background tasks)
-    // ─────────────────────────────────────────────
 
     fun isIgnoringBatteryOptimizations(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
 
-        val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         return pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun requestIgnoreBatteryOptimizations(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-            data = Uri.parse("package:${context.packageName}")
-        }
-
-        context.startActivity(intent)
+        context.startActivity(
+            activityIntent(
+                context,
+                Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                Uri.parse("package:${context.packageName}")
+            )
+        )
     }
-
-    // ─────────────────────────────────────────────
-    // Notification Permission (Android 13+)
-    // ─────────────────────────────────────────────
 
     fun hasNotificationPermission(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
 
         return context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED
+            android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
     fun requestNotificationPermission(activity: Activity, requestCode: Int) {
@@ -96,10 +78,6 @@ object PermissionManager {
             requestCode
         )
     }
-
-    // ─────────────────────────────────────────────
-    // Combined Check (VERY USEFUL)
-    // ─────────────────────────────────────────────
 
     data class PermissionStatus(
         val exactAlarm: Boolean,

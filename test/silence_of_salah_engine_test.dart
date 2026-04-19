@@ -10,22 +10,26 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      switch (methodCall.method) {
-        case 'getPlatformVersion':
-          return 'Android 42';
-        case 'startNativeTask':
-          return true;
-        case 'stopNativeTask':
-          return true;
-        case 'getNativeStatus':
-          return <String, Object?>{
-            'serviceRunning': true,
-            'modelLoaded': true,
-          };
-        default:
-          return null;
-      }
-    });
+          switch (methodCall.method) {
+            case 'getPlatformVersion':
+              return 'Android 42';
+            case 'startNativeTask':
+              return true;
+            case 'stopNativeTask':
+              return true;
+            case 'getNativeStatus':
+              return <String, Object?>{
+                'serviceRunning': true,
+                'modelLoaded': true,
+              };
+            case 'debugSetAudioSilent':
+              return <String, Object?>{'audioState': 'silent'};
+            case 'debugRestoreAudioDefault':
+              return <String, Object?>{'audioState': 'default'};
+            default:
+              return null;
+          }
+        });
   });
 
   tearDown(() {
@@ -49,6 +53,20 @@ void main() {
     expect(
       await SilenceOfSalahEngine.getNativeStatus(),
       containsPair('modelLoaded', true),
+    );
+  });
+
+  test('debugSetAudioSilent proxies through the method channel', () async {
+    expect(
+      await SilenceOfSalahEngine.debugSetAudioSilent(),
+      containsPair('audioState', 'silent'),
+    );
+  });
+
+  test('debugRestoreAudioDefault proxies through the method channel', () async {
+    expect(
+      await SilenceOfSalahEngine.debugRestoreAudioDefault(),
+      containsPair('audioState', 'default'),
     );
   });
 }

@@ -1,56 +1,49 @@
 package com.holywarrior.silence_of_salah_engine.audio
 
+import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioManager
-import android.app.NotificationManager
+import com.holywarrior.silence_of_salah_engine.EngineLog
 
 object AudioProfileManager {
+    private const val COMPONENT = "Audio"
 
-    private var previousRingerMode: Int? = null
-
-    /**
-     * Check if phone is currently in silent mode
-     */
     fun isSilent(context: Context): Boolean {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         return audioManager.ringerMode == AudioManager.RINGER_MODE_SILENT
     }
 
+    fun getCurrentRingerMode(context: Context): Int {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return audioManager.ringerMode
+    }
 
     fun hasDndAccess(context: Context): Boolean {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         return nm.isNotificationPolicyAccessGranted
     }
 
-    /**
-     * Switch current profile → silent
-     * Saves previous state ONLY if not already silent
-     */
     fun switchToSilent(context: Context) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
         val currentMode = audioManager.ringerMode
 
-        // If already silent, do nothing
-        if (currentMode == AudioManager.RINGER_MODE_SILENT) return
-
-        // Save previous mode
-        previousRingerMode = currentMode
+        if (currentMode == AudioManager.RINGER_MODE_SILENT) {
+            EngineLog.d(COMPONENT, "Audio already silent. No profile change needed.")
+            return
+        }
 
         audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
+        EngineLog.i(COMPONENT, "Audio profile changed to SILENT. previousMode=$currentMode")
     }
 
-    /**
-     * Restore silent → previous profile
-     */
-    fun restorePreviousProfile(context: Context) {
+    fun restoreOriginalProfile(context: Context, originalRingerMode: Int?) {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-        val previous = previousRingerMode ?: return
+        val previous = originalRingerMode ?: run {
+            EngineLog.w(COMPONENT, "Original ringer mode unavailable. Skipping restore.")
+            return
+        }
 
         audioManager.ringerMode = previous
-
-        // Clear after restore to avoid stale state
-        previousRingerMode = null
+        EngineLog.i(COMPONENT, "Audio profile restored to original mode=$previous")
     }
 }
