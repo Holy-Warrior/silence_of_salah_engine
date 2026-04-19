@@ -1,6 +1,6 @@
-# silence_of_salah_engine_example
+# silence_of_salah_app
 
-Demonstrates how to use the silence_of_salah_engine plugin.
+Debug application for the `silence_of_salah_engine` plugin.
 
 ## Getting Started
 

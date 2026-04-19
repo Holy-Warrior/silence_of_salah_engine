@@ -15,12 +15,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final TextEditingController _hourController = TextEditingController(
-    text: '5',
-  );
-  final TextEditingController _minuteController = TextEditingController(
-    text: '30',
-  );
+  final TextEditingController _hourController = TextEditingController(text: '5');
+  final TextEditingController _minuteController = TextEditingController(text: '30');
 
   String _log = 'Idle';
   String _platformVersion = 'Unknown';
@@ -99,9 +95,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _startTask() async {
-    final success = await SilenceOfSalahEngine.startNativeTask(
-      args: <String, dynamic>{'reason': 'example_app'},
-    );
+    final success = await SilenceOfSalahEngine.startNativeTask(args: <String, dynamic>{'reason': 'example_app'});
     _appendLog('Start service -> $success');
     await _refreshStatus();
   }
@@ -115,16 +109,9 @@ class _MyAppState extends State<MyApp> {
   Future<void> _scheduleAlarm() async {
     final hour = int.parse(_hourController.text);
     final minute = int.parse(_minuteController.text);
-    final alarms = await SilenceOfSalahEngine.scheduleDailyAlarms(
-      <Map<String, Object?>>[
-        <String, Object?>{
-          'id': hour * 100 + minute,
-          'hour': hour,
-          'minute': minute,
-          'label': 'Example alarm',
-        },
-      ],
-    );
+    final alarms = await SilenceOfSalahEngine.scheduleDailyAlarms(<Map<String, Object?>>[
+      <String, Object?>{'id': hour * 100 + minute, 'hour': hour, 'minute': minute, 'label': 'Example alarm'},
+    ]);
     _appendLog('Scheduled alarms -> $alarms');
     await _refreshStatus();
   }
@@ -137,17 +124,13 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _triggerMlInference() async {
     final features = List<double>.filled(450, 0.0);
-    final result = await SilenceOfSalahEngine.triggerMlProcessing(
-      features: features,
-    );
+    final result = await SilenceOfSalahEngine.triggerMlProcessing(features: features);
     _appendLog('ML inference -> $result');
     await _refreshStatus();
   }
 
   Future<void> _submitMlValue(bool value) async {
-    final result = await SilenceOfSalahEngine.submitMlDecisionOutput(
-      value: value,
-    );
+    final result = await SilenceOfSalahEngine.submitMlDecisionOutput(value: value);
     _appendLog('Decision sample ($value) -> $result');
     await _refreshStatus();
   }
@@ -189,10 +172,7 @@ class _MyAppState extends State<MyApp> {
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F5F7),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFF3F5F7), borderRadius: BorderRadius.circular(12)),
       child: Text('$label: ${value ?? "n/a"}'),
     );
   }
@@ -200,10 +180,7 @@ class _MyAppState extends State<MyApp> {
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, top: 12),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
+      child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -225,9 +202,7 @@ class _MyAppState extends State<MyApp> {
                     runSpacing: 10,
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_refreshStatus),
+                        onPressed: _isLoading ? null : () => _run(_refreshStatus),
                         child: const Text('Refresh Status'),
                       ),
                       ElevatedButton(
@@ -241,33 +216,19 @@ class _MyAppState extends State<MyApp> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _statusTile(
-                    'Service running',
-                    _nativeStatus['serviceRunning'],
-                  ),
+                  _statusTile('Service running', _nativeStatus['serviceRunning']),
                   _statusTile('Model loaded', _nativeStatus['modelLoaded']),
                   _statusTile('Audio state', _nativeStatus['audioState']),
-                  _statusTile(
-                    'Current ringer mode',
-                    _nativeStatus['currentRingerMode'],
-                  ),
-                  _statusTile(
-                    'Recent ML outputs',
-                    _nativeStatus['recentMlOutputs'],
-                  ),
-                  _statusTile(
-                    'Shutdown deadline',
-                    _nativeStatus['shutdownDeadlineMillis'],
-                  ),
+                  _statusTile('Current ringer mode', _nativeStatus['currentRingerMode']),
+                  _statusTile('Recent ML outputs', _nativeStatus['recentMlOutputs']),
+                  _statusTile('Shutdown deadline', _nativeStatus['shutdownDeadlineMillis']),
                   _sectionTitle('Permissions'),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_requestExactAlarmPermission),
+                        onPressed: _isLoading ? null : () => _run(_requestExactAlarmPermission),
                         child: const Text('Exact Alarm'),
                       ),
                       ElevatedButton(
@@ -275,15 +236,11 @@ class _MyAppState extends State<MyApp> {
                         child: const Text('DND Access'),
                       ),
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_requestBatteryOptimization),
+                        onPressed: _isLoading ? null : () => _run(_requestBatteryOptimization),
                         child: const Text('Battery Ignore'),
                       ),
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_requestNotifications),
+                        onPressed: _isLoading ? null : () => _run(_requestNotifications),
                         child: const Text('Notifications'),
                       ),
                     ],
@@ -296,15 +253,11 @@ class _MyAppState extends State<MyApp> {
                     runSpacing: 10,
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_setSilentAudio),
+                        onPressed: _isLoading ? null : () => _run(_setSilentAudio),
                         child: const Text('Force Silent'),
                       ),
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_restoreDefaultAudio),
+                        onPressed: _isLoading ? null : () => _run(_restoreDefaultAudio),
                         child: const Text('Restore Default'),
                       ),
                     ],
@@ -324,9 +277,7 @@ class _MyAppState extends State<MyApp> {
                         child: TextField(
                           controller: _minuteController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Minute',
-                          ),
+                          decoration: const InputDecoration(labelText: 'Minute'),
                         ),
                       ),
                     ],
@@ -337,9 +288,7 @@ class _MyAppState extends State<MyApp> {
                     runSpacing: 10,
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_scheduleAlarm),
+                        onPressed: _isLoading ? null : () => _run(_scheduleAlarm),
                         child: const Text('Schedule Daily'),
                       ),
                       ElevatedButton(
@@ -355,21 +304,15 @@ class _MyAppState extends State<MyApp> {
                     runSpacing: 10,
                     children: [
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(_triggerMlInference),
+                        onPressed: _isLoading ? null : () => _run(_triggerMlInference),
                         child: const Text('Run ML Inference'),
                       ),
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(() => _submitMlValue(true)),
+                        onPressed: _isLoading ? null : () => _run(() => _submitMlValue(true)),
                         child: const Text('Submit TRUE'),
                       ),
                       ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _run(() => _submitMlValue(false)),
+                        onPressed: _isLoading ? null : () => _run(() => _submitMlValue(false)),
                         child: const Text('Submit FALSE'),
                       ),
                     ],
@@ -385,10 +328,7 @@ class _MyAppState extends State<MyApp> {
                     color: Colors.black,
                     child: SelectableText(
                       _log,
-                      style: const TextStyle(
-                        color: Colors.green,
-                        fontFamily: 'monospace',
-                      ),
+                      style: const TextStyle(color: Colors.green, fontFamily: 'monospace'),
                     ),
                   ),
                 ],

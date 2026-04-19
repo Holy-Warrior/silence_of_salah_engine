@@ -7,9 +7,7 @@ import java.io.File
 object ModelAssetInstaller {
 
     private const val TAG = "ModelAssetInstaller"
-    private const val MODEL_ASSET_PATH = "models/model_100ms_xgb.model"
     private const val NATIVE_ASSET_PATH = "models/model_100ms_xgb_native.json"
-    private const val MODEL_FILE_NAME = "model_100ms_xgb.model"
     private const val NATIVE_FILE_NAME = "model_100ms_xgb_native.json"
 
     @Volatile
@@ -26,13 +24,10 @@ object ModelAssetInstaller {
             targetDir.mkdirs()
         }
 
-        val bundledModelFile = File(targetDir, MODEL_FILE_NAME)
-        installAsset(context, MODEL_ASSET_PATH, bundledModelFile)
-        installedModelPath = bundledModelFile.absolutePath
-
         val nativeTargetFile = File(targetDir, NATIVE_FILE_NAME)
         installAsset(context, NATIVE_ASSET_PATH, nativeTargetFile)
         installedNativeModelPath = nativeTargetFile.absolutePath
+        installedModelPath = null
 
         return nativeTargetFile.absolutePath
     }

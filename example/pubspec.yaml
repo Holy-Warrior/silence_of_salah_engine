@@ -1,4 +1,4 @@
-name: silence_of_salah_engine_example
+name: silence_of_salah_app
 description: "Demonstrates how to use the silence_of_salah_engine plugin."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.

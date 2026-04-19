@@ -1,4 +1,4 @@
-package com.holywarrior.silence_of_salah_engine_example
+package com.holywarrior.silenceofsalah
 
 import io.flutter.embedding.android.FlutterActivity
 

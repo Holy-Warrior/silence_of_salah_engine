@@ -2,6 +2,7 @@ package com.holywarrior.silence_of_salah_engine.sensors
 
 import android.content.Context
 import android.hardware.*
+import com.holywarrior.silence_of_salah_engine.EngineLog
 import kotlin.math.sqrt
 
 // Enum representing available sensors
@@ -13,6 +14,7 @@ enum class SensorType {
 
 // Singleton sensor manager
 object SensorsManager : SensorEventListener {
+    private const val COMPONENT = "Sensors"
 
     private lateinit var sensorManager: SensorManager
 
@@ -43,11 +45,12 @@ object SensorsManager : SensorEventListener {
             sensorManager.registerListener(
                 this,
                 sensor,
-                SensorManager.SENSOR_DELAY_FASTEST
+                SensorManager.SENSOR_DELAY_GAME
             )
         }
 
         isListening = true
+        EngineLog.d(COMPONENT, "Sensors started with SENSOR_DELAY_GAME.")
     }
 
     /**
@@ -56,7 +59,9 @@ object SensorsManager : SensorEventListener {
     fun stop() {
         if (!isListening) return
         sensorManager.unregisterListener(this)
+        latestValues.values.forEach { values -> values.fill(0f) }
         isListening = false
+        EngineLog.d(COMPONENT, "Sensors stopped and cached values cleared.")
     }
 
     /**
@@ -98,7 +103,11 @@ object SensorsManager : SensorEventListener {
         }
 
         type?.let {
-            latestValues[it] = event.values.clone()
+            val target = latestValues.getOrPut(it) { FloatArray(event.values.size) }
+            val copyLength = minOf(target.size, event.values.size)
+            for (index in 0 until copyLength) {
+                target[index] = event.values[index]
+            }
         }
     }
 

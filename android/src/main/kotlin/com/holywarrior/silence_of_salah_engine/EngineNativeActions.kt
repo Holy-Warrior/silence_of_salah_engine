@@ -90,6 +90,11 @@ class EngineNativeActions(
             )
         }
 
+        val duplicateIds = alarms.groupBy { it.id }.filterValues { it.size > 1 }.keys
+        require(duplicateIds.isEmpty()) {
+            "Alarm ids must be unique. Duplicates: ${duplicateIds.joinToString(", ")}"
+        }
+
         return AlarmScheduler.scheduleDailyAlarms(context, alarms).map { it.toMap() }
     }
 

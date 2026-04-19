@@ -22,6 +22,26 @@ void main() {
                 'serviceRunning': true,
                 'modelLoaded': true,
               };
+            case 'scheduleDailyAlarms':
+              return <Object?>[
+                <String, Object?>{
+                  'id': 530,
+                  'hour': 5,
+                  'minute': 30,
+                  'repeatDaily': true,
+                },
+              ];
+            case 'getScheduledAlarms':
+              return <Object?>[
+                <String, Object?>{
+                  'id': 530,
+                  'hour': 5,
+                  'minute': 30,
+                  'repeatDaily': true,
+                },
+              ];
+            case 'cancelAllAlarms':
+              return true;
             case 'debugSetAudioSilent':
               return <String, Object?>{'audioState': 'silent'};
             case 'debugRestoreAudioDefault':
@@ -54,6 +74,22 @@ void main() {
       await SilenceOfSalahEngine.getNativeStatus(),
       containsPair('modelLoaded', true),
     );
+  });
+
+  test('scheduleDailyAlarms proxies through the method channel', () async {
+    final alarms = await SilenceOfSalahEngine.scheduleDailyAlarms([
+      {'id': 530, 'hour': 5, 'minute': 30},
+    ]);
+    expect(alarms.single, containsPair('repeatDaily', true));
+  });
+
+  test('getScheduledAlarms proxies through the method channel', () async {
+    final alarms = await SilenceOfSalahEngine.getScheduledAlarms();
+    expect(alarms.single, containsPair('id', 530));
+  });
+
+  test('cancelAllAlarms proxies through the method channel', () async {
+    expect(await SilenceOfSalahEngine.cancelAllAlarms(), isTrue);
   });
 
   test('debugSetAudioSilent proxies through the method channel', () async {

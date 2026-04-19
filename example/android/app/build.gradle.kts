@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.holywarrior.silence_of_salah_engine_example"
+    namespace = "com.holywarrior.silenceofsalah"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.holywarrior.silence_of_salah_engine_example"
+        applicationId = "com.holywarrior.silenceofsalah"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="silence_of_salah_engine_example"
+        android:label="Silence of Salah"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
