@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Silence Engine Example</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px 16px 48px;
+      font-family: -apple-system, Roboto, Segoe UI, sans-serif;
+      background: #0f1720;
+      color: #e6edf3;
+    }
+    h1 { font-size: 18px; margin: 4px 0 16px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: #8b949e; margin: 20px 0 8px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+    button {
+      flex: 1 1 auto;
+      min-width: 120px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: #161b22;
+      color: #e6edf3;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:active { background: #21262d; }
+    button.primary { background: #0f4c4c; border-color: #146464; }
+    button.danger { background: #4c1414; border-color: #642020; }
+    pre#output {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #010409;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      max-height: 40vh;
+      overflow: auto;
+      margin-top: 8px;
+    }
+    .status { font-size: 12px; color: #8b949e; margin-top: 4px; }
+    .status.ok { color: #3fb950; }
+    .status.err { color: #f85149; }
+  </style>
+</head>
+<body>
+  <h1>silence-of-salah-engine example</h1>
+  <div class="status" id="status">Ready.</div>
+
+  <h2>Platform &amp; permissions</h2>
+  <div class="row">
+    <button data-cmd="getPlatformVersion">Get platform version</button>
+    <button data-cmd="getPermissionStatus">Get permission status</button>
+  </div>
+  <div class="row">
+    <button data-cmd="requestExactAlarmPermission">Request exact alarm</button>
+    <button data-cmd="requestNotificationPermission">Request notifications</button>
+  </div>
+  <div class="row">
+    <button data-cmd="requestBatteryOptimization">Request battery exemption</button>
+    <button data-cmd="requestDndAccess">Request DND access</button>
+  </div>
+
+  <h2>Service lifecycle</h2>
+  <div class="row">
+    <button class="primary" data-action="startNativeTask">Start native task</button>
+    <button class="danger" data-cmd="stopNativeTask">Stop native task</button>
+  </div>
+  <div class="row">
+    <button data-cmd="getNativeStatus">Get native status</button>
+  </div>
+
+  <h2>Alarms</h2>
+  <div class="row">
+    <button data-action="scheduleTestAlarm">Schedule test alarm (+2 min)</button>
+    <button data-action="scheduleExampleAlarms">Schedule example prayer alarms</button>
+  </div>
+  <div class="row">
+    <button data-cmd="getScheduledAlarms">Get scheduled alarms</button>
+    <button class="danger" data-cmd="cancelAllAlarms">Cancel all alarms</button>
+  </div>
+
+  <h2>ML / decision engine (debug)</h2>
+  <div class="row">
+    <button data-action="triggerMlProcessing">Trigger ML processing (zeros)</button>
+  </div>
+  <div class="row">
+    <button data-action="submitTrue">Submit ML output: true</button>
+    <button data-action="submitFalse">Submit ML output: false</button>
+  </div>
+  <div class="row">
+    <button data-cmd="debugSetAudioSilent">Force silent</button>
+    <button data-cmd="debugRestoreAudioDefault">Restore default</button>
+  </div>
+
+  <h2>Last result</h2>
+  <pre id="output">(nothing yet)</pre>
+
+  <script>
+    const { invoke } = window.__TAURI__.core
+
+    const output = document.getElementById('output')
+    const status = document.getElementById('status')
+
+    function cmd(name) {
+      return `plugin:silence-of-salah-engine|${name}`
+    }
+
+    async function run(label, fn) {
+      status.textContent = `Running ${label}...`
+      status.className = 'status'
+      try {
+        const result = await fn()
+        output.textContent = JSON.stringify(result, null, 2)
+        status.textContent = `${label} succeeded.`
+        status.className = 'status ok'
+      } catch (error) {
+        output.textContent = typeof error === 'string' ? error : JSON.stringify(error, null, 2)
+        status.textContent = `${label} failed.`
+        status.className = 'status err'
+      }
+    }
+
+    // Every plain data-cmd button just invokes the matching Tauri command
+    // with no payload - mirrors the no-argument functions in guest-js/index.ts.
+    document.querySelectorAll('button[data-cmd]').forEach((button) => {
+      const name = button.dataset.cmd
+      button.addEventListener('click', () => run(name, () => invoke(cmd(toSnakeCase(name)))))
+    })
+
+    document.querySelector('[data-action="scheduleTestAlarm"]').addEventListener('click', () => {
+      run('scheduleDailyAlarms (test, +2 min)', () => {
+        const now = new Date(Date.now() + 2 * 60 * 1000)
+        return invoke(cmd('schedule_daily_alarms'), {
+          payload: {
+            alarms: [
+              { hour: now.getHours(), minute: now.getMinutes(), label: 'Test alarm' }
+            ]
+          }
+        })
+      })
+    })
+
+    document.querySelector('[data-action="scheduleExampleAlarms"]').addEventListener('click', () => {
+      run('scheduleDailyAlarms (example prayer times)', () =>
+        invoke(cmd('schedule_daily_alarms'), {
+          payload: {
+            alarms: [
+              { hour: 5, minute: 12, label: 'Fajr' },
+              { hour: 13, minute: 0, label: 'Dhuhr' },
+              { hour: 16, minute: 30, label: 'Asr' },
+              { hour: 19, minute: 5, label: 'Maghrib' },
+              { hour: 20, minute: 35, label: 'Isha' }
+            ]
+          }
+        })
+      )
+    })
+
+    document.querySelector('[data-action="triggerMlProcessing"]').addEventListener('click', () => {
+      run('triggerMlProcessing (450 zeros)', () =>
+        invoke(cmd('trigger_ml_processing'), { payload: { features: new Array(450).fill(0) } })
+      )
+    })
+
+    document.querySelector('[data-action="submitTrue"]').addEventListener('click', () => {
+      run('submitMlDecisionOutput(true)', () =>
+        invoke(cmd('submit_ml_decision_output'), { payload: { value: true } })
+      )
+    })
+
+    document.querySelector('[data-action="submitFalse"]').addEventListener('click', () => {
+      run('submitMlDecisionOutput(false)', () =>
+        invoke(cmd('submit_ml_decision_output'), { payload: { value: false } })
+      )
+    })
+
+    // startNativeTask needs a `payload` object too (its `reason` field is
+    // optional), so it's wired as a data-action like the other
+    // payload-carrying commands above rather than the generic data-cmd loop.
+    document.querySelector('[data-action="startNativeTask"]').addEventListener('click', () => {
+      run('startNativeTask', () => invoke(cmd('start_native_task'), { payload: { reason: 'example_app' } }))
+    })
+
+    function toSnakeCase(camel) {
+      return camel.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+    }
+  </script>
+</body>
+</html>

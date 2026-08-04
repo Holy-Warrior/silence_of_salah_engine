@@ -39,7 +39,7 @@ class EngineNativeActions(
         SilenceOfSalahEngineForegroundService.pendingStateController = stateController
 
         try {
-            ServiceLauncher.start(context, reason = (args?.get("reason") as? String) ?: "flutter")
+            ServiceLauncher.start(context, reason = (args?.get("reason") as? String) ?: "tauri")
         } catch (error: Exception) {
             EngineLog.e(COMPONENT, "Failed to start foreground service.", error)
             SilenceOfSalahEngineForegroundService.pendingTask = null
@@ -51,7 +51,7 @@ class EngineNativeActions(
     fun stopNativeTask() {
         EngineLog.d(COMPONENT, "stopNativeTask called")
         SilenceOfSalahEngineForegroundService.clearPendingStart()
-        ServiceLauncher.stop(context, reason = "flutter")
+        ServiceLauncher.stop(context, reason = "tauri")
     }
 
     fun getNativeStatus(): Map<String, Any?> {

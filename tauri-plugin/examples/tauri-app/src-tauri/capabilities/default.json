@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "default",
+  "description": "Capabilities for the main window of the example app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "silence-of-salah-engine:default",
+    "silence-of-salah-engine:debug"
+  ]
+}

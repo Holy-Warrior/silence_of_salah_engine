@@ -1,8 +1,6 @@
 package com.holywarrior.silence_of_salah_engine
 
 object Config {
-    const val METHOD_CHANNEL_NAME = "silence_of_salah_engine"
-
     const val WAKE_LOCK_TIMEOUT_MS = 45 * 60 * 1000L
     const val ML_BUFFER_SIZE = 5
     const val SHUTDOWN_DELAY_MS = 10 * 60 * 1000L

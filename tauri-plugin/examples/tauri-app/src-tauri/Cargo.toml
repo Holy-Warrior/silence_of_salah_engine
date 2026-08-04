@@ -1,0 +1,26 @@
+[package]
+name = "silence-engine-example"
+version = "0.1.0"
+description = "Minimal example app exercising every tauri-plugin-silence-of-salah-engine command"
+edition = "2021"
+publish = false
+
+[lib]
+name = "silence_engine_example_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-silence-of-salah-engine = { path = "../../.." }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1   # lets LLVM optimize across the whole crate
+lto = true          # link-time optimization
+opt-level = "s"     # optimize for size (use "z" for even smaller, slightly slower)
+panic = "abort"     # drops unwinding tables
+strip = true        # strips debug symbols from the .so
